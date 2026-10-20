@@ -3,7 +3,7 @@ Time-to-first-audio probe for the Open TTS Leaderboard (audio.cpp backend).
 
 0xShug0/audio.cpp (https://github.com/0xShug0/audio.cpp) is a ggml C++ runtime whose
 `audiocpp_server` streams many TTS families over an OpenAI-style SSE endpoint. Some are a second
-ENGINE for models the leaderboard already evaluates (Qwen3-TTS, Higgs, VoxCPM2, Supertonic,
+ENGINE for models the leaderboard already evaluates (Qwen3-TTS, VoxCPM2, Supertonic,
 Pocket TTS, Breeze, Fish Audio, and Voxtral); the
 rest are only available here (see FAMILIES).
 
@@ -63,12 +63,6 @@ FAMILIES = {
         # The talker takes the English language NAME, as in qwen3tts/run_eval.py; unknown codes pass through.
         "language": {"zh": "Chinese", "en": "English", "ja": "Japanese", "ko": "Korean", "de": "German",
                      "fr": "French", "ru": "Russian", "pt": "Portuguese", "es": "Spanish", "it": "Italian"},
-    },
-    "bosonai/higgs-tts-3-4b": {
-        "family": "higgs_audio_tts",
-        "package": "higgs_audio_tts_4b_bf16",
-        # Defaults: 1024 tokens, temperature 0.8, top-k 50, and no top-p override.
-        "request": {"max_tokens": 1024, "temperature": 0.8, "top_k": 50},
     },
     "openbmb/VoxCPM2": {
         "family": "voxcpm2",

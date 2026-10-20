@@ -158,7 +158,6 @@ TTFA_TARGETS=(
     # streaming endpoint (see audiocpp/run_eval.py).
     # The Space's image tag is per device:  TTFA_DEVICE=cpu AUDIOCPP_SPACE=bezzam/evals-audiocpp-cpu ...
     "audiocpp-qwen3tts|audiocpp|${AUDIOCPP_SPACE:-bezzam/evals-audiocpp}|Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice|--language=${TTFA_LANG}|audiocpp"
-    "audiocpp-higgs|audiocpp|${AUDIOCPP_SPACE:-bezzam/evals-audiocpp}|bosonai/higgs-tts-3-4b||audiocpp"
     "audiocpp-voxcpm2|audiocpp|${AUDIOCPP_SPACE:-bezzam/evals-audiocpp}|openbmb/VoxCPM2||audiocpp"
     "audiocpp-supertonic|audiocpp|${AUDIOCPP_SPACE:-bezzam/evals-audiocpp}|Supertone/supertonic-3|--language=${TTFA_LANG}|audiocpp"
     "audiocpp-pocket-tts|audiocpp|${AUDIOCPP_SPACE:-bezzam/evals-audiocpp}|kyutai/pocket-tts||audiocpp"
