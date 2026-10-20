@@ -60,7 +60,9 @@ FAMILIES = {
         # CustomVoice preset Aiden and 12 frames per stream event.
         "request": {"voice": "Aiden"},
         "options": {"stream_frames_per_event": "12"},
-        "language": True,
+        # The talker takes the English language NAME, as in qwen3tts/run_eval.py; unknown codes pass through.
+        "language": {"zh": "Chinese", "en": "English", "ja": "Japanese", "ko": "Korean", "de": "German",
+                     "fr": "French", "ru": "Russian", "pt": "Portuguese", "es": "Spanish", "it": "Italian"},
     },
     "bosonai/higgs-tts-3-4b": {
         "family": "higgs_audio_tts",
@@ -121,6 +123,8 @@ FAMILIES = {
         "package": "vibevoice_1_5b_bf16",
         # VibeVoice 1.5B uses its documented guidance scale of 1.3.
         "request": {"guidance_scale": 1.3},
+        # A multi-speaker script model: the server rejects text without `Speaker N:` lines.
+        "text_template": "Speaker 1: {}",
         "reference_text": False,  # speaker conditioning consumes audio, not its transcript
     },
     "mistralai/Voxtral-4B-TTS-2603": {
@@ -344,12 +348,15 @@ def main(args):
     print(f"audio.cpp server version: {version}, image: {os.environ.get('AUDIOCPP_IMAGE')}")
 
     def _body(text, stream, ref=None):
+        text = cfg.get("text_template", "{}").format(text)
         body = {"model": "probe", "input": text, "seed": args.seed, **cfg.get("request", {})}
         options = dict(cfg.get("options", {}))
         if "instructions" in cfg:
             body["instructions"] = cfg["instructions"].get(args.language, cfg["instructions"]["en"])
         if cfg.get("language"):
-            body["language"] = args.language
+            # True sends the ISO code; a dict maps it to the name the family expects.
+            names = cfg["language"] if isinstance(cfg["language"], dict) else {}
+            body["language"] = names.get(args.language, args.language)
         if ref is not None:
             # The row's own prompt replaces any preset voice, as in the reference backends' clone mode.
             body.pop("voice", None)
