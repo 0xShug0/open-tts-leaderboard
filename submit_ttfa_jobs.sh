@@ -82,6 +82,21 @@ esac
 # backend's own submit_jobs.sh passes cuda:0, so match that.
 [[ "${TTFA_DEVICE}" == "cuda" ]] && TTFA_DEVICE="cuda:0"
 
+# Phonon is CPU-only and opt-in; keep it out of the default GPU target list.
+PHONON_SELECTED=false
+for selected in "$@"; do
+    case "$selected" in
+        phonon|phonon-31m-en|phonon-40m-en|gradium/phonon-31m-en|gradium/phonon-40m-en) PHONON_SELECTED=true ;;
+    esac
+done
+PHONON_TTFA_MODE="${PHONON_TTFA_MODE:-streaming}"
+if ${PHONON_SELECTED}; then
+    [[ "$TTFA_DEVICE:$FLAVOR:$TTFA_DATASET:$TTFA_SPLIT:$TTFA_LANG:$VOICE_CLONE" == cpu:cpu-upgrade:zero_shot:en:en:false \
+        && ( "$TTFA_SAMPLES" == -1 || "$TTFA_SAMPLES" == 500 ) ]] || {
+        echo "Phonon requires CPU/cpu-upgrade, all 500 CV3 English samples, and no voice cloning." >&2; exit 1;
+    }
+fi
+
 LOG_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/ttfa_job_logs"
 mkdir -p "${LOG_DIR}"
 NAMESPACE_ARG=""; [ -n "$ORG_NAME" ] && NAMESPACE_ARG="--namespace ${ORG_NAME}"
@@ -187,9 +202,40 @@ TTFA_TARGETS=(
     "voxtral-tts|voxtral-tts|bezzam/evals-voxtral|mistralai/Voxtral-4B-TTS-2603|--base_url=http://localhost:${VLLM_PORT} --server_pid=\${SERVER_PID}"
     "higgs|higgs|bezzam/evals-higgs|bosonai/higgs-tts-3-4b|--host=127.0.0.1 --port=${SGLANG_PORT}"
 )
+if ${PHONON_SELECTED}; then
+    TTFA_TARGETS+=(
+        "phonon-31m-en|phonon|${PHONON_SPACE:-Steveeeeeeen/evals-phonon-040}|gradium/phonon-31m-en||"
+        "phonon-40m-en|phonon|${PHONON_SPACE:-Steveeeeeeen/evals-phonon-040}|gradium/phonon-40m-en||"
+    )
+fi
 
 # Backends whose run_eval.py has no --voice_clone flag at all; passing one would be an error.
-NO_CLONE_FLAG="inflect-nano inflect-v2 kokoro lfm2-audio magpie-tts paradee photon qwen3tts qwen3tts-fast supertonic vibevoice_realtime voxtral-tts"
+NO_CLONE_FLAG="inflect-nano inflect-v2 kokoro lfm2-audio magpie-tts paradee phonon photon qwen3tts qwen3tts-fast supertonic vibevoice_realtime voxtral-tts"
+
+# run_eval.py writes to its own output roots (outside Git, mode 0700) and names the sidecar itself,
+# so Phonon skips the generic run/rename/copy below; `preamble` is submit_one's CPU thread cap.
+submit_phonon() {
+    local model_id="$1" space="$2" inject="$3" preamble="$4" model_safe="${1//\//-}" dataset_safe="${TTFA_DATASET_PATH//\//-}"
+    local engine="" runner
+    [[ "$PHONON_TTFA_MODE" != streaming ]] || engine="__ptts-stream"
+    local filename="TTFA_MODEL_${model_safe}_DATASET_${dataset_safe}_zero_shot_en${engine}__cpu-upgrade.json"
+    local args=(--model_id "$model_id" --dataset_path "$TTFA_DATASET_PATH"
+        --dataset zero_shot --split en --device cpu --ttfa_probe 500 --ttfa_flavor cpu-upgrade
+        --ttfa_mode "$PHONON_TTFA_MODE" --max_eval_samples -1 --warmup_steps 0)
+    [[ -z "${TTFA_DATASET_REVISION:-}" ]] || args+=(--dataset_revision "$TTFA_DATASET_REVISION")
+    printf -v runner '%q ' python /app/phonon/run_eval.py "${args[@]}"
+    local command="set -euo pipefail
+        ${inject}
+        ${TTFA_INJECT} true || exit 1
+        ${preamble}
+        ${runner} --threads \"\${_cpuq}\" --output_root /tmp/phonon/quality --ttfa_output_root /tmp/phonon/ttfa
+        mkdir -p '/results/${model_safe}'
+        cp '/tmp/phonon/ttfa/results/${model_safe}/${filename}' '/results/${model_safe}/'
+    "
+    local -a job=(hf jobs run --flavor cpu-upgrade --timeout 1h --secrets HF_TOKEN)
+    [[ -z "$ORG_NAME" ]] || job+=(--namespace "$ORG_NAME")
+    "${job[@]}" --volume "hf://buckets/${RESULTS_BUCKET}:/results" "hf.co/spaces/${space}" bash -c "$command"
+}
 
 submit_one() {
     local backend="$1" space="$2" model_id="$3" extra="$4" engine="$5"
@@ -237,6 +283,11 @@ submit_one() {
             echo "ERROR: CPU thread-cap preamble is empty or truncated — check its quoting." >&2
             return 1
         fi
+    fi
+
+    if [[ "${backend}" == phonon ]]; then
+        submit_phonon "${model_id}" "${space}" "${inject}" "${preamble}"
+        return
     fi
 
     case "${backend}" in
