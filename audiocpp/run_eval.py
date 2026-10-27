@@ -95,8 +95,8 @@ FAMILIES = {
         "package": "breeze_tts_2_bf16",
         "session_options": {"breeze_tts.perf_mode": "cuda_perf"},
         # breeze-tts/run_eval.py: reference-free voice design from a neutral per-language instruction
-        # (filled in main()), cfg 1.0. The streaming chunking is pinned to audio.cpp's defaults
-        # because it sets the TTFA floor; it is recorded in the sidecar.
+        # (filled in main()), cfg 1.0.
+        # Default grow starts at one frame with zero lookahead, matching Python's fast-mode first chunk.
         "request": {"guidance_scale": 1.0},
         "instructions": {"en": "Speak clearly and naturally.", "zh": "请用清晰自然的语气朗读。"},
         # Prompt-audio cloning is a separate task ("clon") for this family.
