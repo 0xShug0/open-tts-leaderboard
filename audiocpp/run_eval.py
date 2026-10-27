@@ -57,6 +57,7 @@ FAMILIES = {
         "family": "qwen3_tts",
         "clone": False,  # reference-audio cloning uses the separate Base checkpoint
         "package": "qwen3_tts_1_7b_customvoice_bf16",
+        "session_options": {"qwen3_tts.perf_mode": "cuda_perf"},
         # CustomVoice preset Aiden and 12 frames per stream event.
         "request": {"voice": "Aiden"},
         "options": {"stream_frames_per_event": "12"},
@@ -67,6 +68,7 @@ FAMILIES = {
     "openbmb/VoxCPM2": {
         "family": "voxcpm2",
         "package": "voxcpm2_bf16",
+        "session_options": {"voxcpm2.perf_mode": "cuda_perf"},
         # voxcpm2/run_eval.py: cfg_value 2.0, inference_timesteps 10, no voice (plain TTS).
         # retry_badcase must be off: retrying a finished bad case is offline-only.
         # The reference emits one codec patch per event, represented here by one frame per event.
@@ -91,6 +93,7 @@ FAMILIES = {
     "BreezeBlue/Breeze-TTS-2": {
         "family": "breeze_tts",
         "package": "breeze_tts_2_bf16",
+        "session_options": {"breeze_tts.perf_mode": "cuda_perf"},
         # breeze-tts/run_eval.py: reference-free voice design from a neutral per-language instruction
         # (filled in main()), cfg 1.0. The streaming chunking is pinned to audio.cpp's defaults
         # because it sets the TTFA floor; it is recorded in the sidecar.
@@ -102,6 +105,7 @@ FAMILIES = {
     "k2-fsa/OmniVoice": {
         "family": "omnivoice",
         "package": "omnivoice_bf16",
+        "session_options": {"omnivoice.perf_mode": "flash_attention"},
         # omnivoice/run_eval.py: auto voice, num_step 32. One stream event per text chunk.
         "request": {"num_inference_steps": 32},
         "language": True,
