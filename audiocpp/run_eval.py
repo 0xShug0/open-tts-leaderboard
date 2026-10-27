@@ -248,6 +248,9 @@ def _start_server(args, cfg, model_path, workdir, task):
             "mode": "streaming",
         }],
     }
+    # Session controls such as perf_mode belong in the server model config, not request options.
+    if cfg.get("session_options"):
+        config["models"][0]["session_options"] = cfg["session_options"]
     config_path = os.path.join(workdir, "server.json")
     with open(config_path, "w", encoding="utf-8") as f:
         json.dump(config, f, indent=1)
@@ -454,6 +457,7 @@ def main(args):
                 "family": cfg["family"],
                 "package": package,
                 "server_threads": threads,
+                "session_options": cfg.get("session_options", {}),
                 "first_audio": "first non-empty speech.audio.delta received by the client (loopback HTTP)",
                 "request": {k: v for k, v in _body("<text>", stream=True, ref=("<prompt>", "<prompt_text>") if voice_clone else None).items()
                             if k not in ("model", "input")},
